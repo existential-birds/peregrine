@@ -51,6 +51,32 @@ Planned lever order (ceiling gap × likelihood, cheapest first):
 5. **E5 quant format** oQ4/mxfp4 variants (bytes/token) — only if a lossy
    trade is agreed.
 
+## Model selection (2026-11-25)
+
+User opened the target to other labs (Ornith, Thinking Machines, Reflection,
+American open labs), chasing higher tok/s. Ceilings from
+`configs/ceiling-*-m4max.json`; quality from Terminal-Bench 2.1 leaderboard
+(rank/value) where present:
+
+| Model | Lab | TB 2.1 | MLX | c1 ceiling @4K | + draft | c4 agg @4K |
+|---|---|---|---|---:|---:|---:|
+| Qwen3.8-27B 4bit (current) | Qwen | 73.0 | ✓ | 28 | 68 (MTP k2) | 429 |
+| **Ornith-1.5-35B-A3B MLX-4bit + DFlash** | Ornith | n/a (1.0-35B: 64.2) | ✓ first-party | **206** | 254–508 | **1758–3125** |
+| Ornith-1.5-9B MLX-4bit + DFlash | Ornith | 47.0 | ✓ first-party | ~86 | ~150–250 | ~700 |
+| Inkling-2-Mini (26B MoE, loop×3) | TML | **71.6** | ✗ custom loop arch | ~145 eff. | — | — |
+| OLMoE-1B-7B 4bit | Ai2 | not listed | ✗ no quant | 453 (154 @32K) | — | 2475 |
+| Reflection Beam-1.0-501B-A23B | Reflection | — | ✗ 280 GB @4bit, doesn't fit | — | — | — |
+
+**Verdict:** single-stream 1000+ tok/s is not reachable from these labs on
+this machine; **1000+ aggregate at c4 is** — via Ornith-1.5-35B-A3B + DFlash.
+DFlash draft is 0.77 GB, block-diffusion (parallel block proposals, README
+shows block size 8), natively supported by our server
+(`--draft-model … --draft-kind dflash --draft-block-size`), and Ornith ships
+first-party MLX quants. It is also the exact model family the skill's B390
+recipe hill-climbed (local-ai-registry PR #453) — a published recipe to mine.
+It is a Qwen-family reasoning model (think-blocks, `reasoning_content`), so
+the harness needs no changes.
+
 ## STATUS
 
 Not started — awaiting first server launch and baseline.
