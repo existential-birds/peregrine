@@ -91,8 +91,10 @@ ceiling, first-party MLX, dflash drafts) — analysis in `PLAN.md`.
 
 ## 2. Project context (all a future model needs)
 
-- **Repos:** this one (`mlx-experiment`, the experiment working dir: harness,
-  configs, ceilings, log) and the fork **`existential-birds/mlx-vlm`** at
+- **Repos:** this one (`peregrine` at
+  `/Users/ka/github/existential-birds/peregrine`, the experiment working dir:
+  harness, configs, ceilings, log) and the fork
+  **`existential-birds/mlx-vlm`** at
   `/Users/ka/github/existential-birds/mlx-vlm` (remotes: `origin` = fork,
   `upstream` = `Neywa-Labs/mlx-vlm`, base `main` @ `e8035ae3`; read its
   `CONTRIBUTING.md` before changing it). The `uv tool`-installed mlx-vlm is
