@@ -79,4 +79,9 @@ the harness needs no changes.
 
 ## STATUS
 
-Not started — awaiting first server launch and baseline.
+Target switched (user decision, 2026-11-25): **Inkling-2-Mini on MLX** —
+novelty over performance; ~145 tok/s ceiling accepted. Implementation plan:
+`PROPOSAL.md` (build `inkling2_loop` for mlx-vlm + affine 4-bit conversion,
+validated against a llama.cpp oracle). Ornith-1.5-35B-A3B + DFlash remains
+the documented fallback/comparator. Baseline experiments deferred until the
+MLX port lands; Phase 0 (llama.cpp oracle baseline) can run meanwhile.
