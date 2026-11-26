@@ -32,6 +32,7 @@ Detailed references, read when needed:
 - `references/methodology.md`: measurement pitfalls and statistics.
 - `references/levers.md`: levers by area, ordered by typical payoff, with measured evidence.
 - `references/gotchas.md`: engine- and hardware-specific traps.
+- `references/mlx.md`: MLX on Apple Silicon — inventory, serving stack, levers and gotchas for mlx-vlm/mlx-lm.
 - `references/publishing.md`: qualification gates, pinning, poster and report.
 - `scripts/`: an engine-agnostic harness. It has a bench, ceiling calculator, memory watchdog, serialized queue and ledger.
 
