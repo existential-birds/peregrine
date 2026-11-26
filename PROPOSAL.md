@@ -12,6 +12,18 @@ contains everything verified so far. **Everything in §3 is verified with the
 commands given; everything in this section is open.** Resolve these in order
 before writing model code — they are ranked by how much they gate the design.
 
+**Where the code lives:** implementation happens in the fork
+**`existential-birds/mlx-vlm`** (cloned at
+`/Users/ka/github/existential-birds/mlx-vlm`, remotes: `origin` = the fork,
+`upstream` = `Neywa-Labs/mlx-vlm`, base `main` @ `e8035ae3`), **not** in this
+repo — `mlx-experiment` stays the experiment working dir (harness, configs,
+ceilings, log). Read the fork's `CONTRIBUTING.md` before changing it. Note:
+the `uv tool`-installed mlx-vlm is PyPI 0.8.1, which lags the fork's `main`;
+read the fork's source as the reference. Dev loop when Phase 2 starts:
+`uv tool install --editable /Users/ka/github/existential-birds/mlx-vlm --force`
+— this keeps `mlx_vlm.server` and every script in this repo working unchanged
+while running fork code.
+
 1. **Loop-pass dataflow.** The exact per-pass computation is in
    `reference/llama-cpp/inkling2-loop.cpp` (123 lines, vendored — read it
    fully). Known so far: every pass starts from the *prelude* output (layers
@@ -203,13 +215,17 @@ for Phase 3, (c) a same-day engine comparison for methodology.md.
 `RESEARCH.md` in this repo with the loop dataflow written out (pass inputs,
 controller math, cache slot map, tensor name table HF→GGUF→MLX).
 
-**Phase 2 — `mlx_vlm/models/inkling2_loop/`.** New package:
+**Phase 2 — `inkling2_loop` in the fork (`../mlx-vlm`, on a branch).** New
+package `mlx_vlm/models/inkling2_loop/`:
 `config.py` (parse nested `text_config` + `loop_config`), `language.py`
 (subclass/reuse inkling2 layer primitives; loop execution over 3 passes;
 48-slot cache with per-slot KV + conv state; controller modulation),
 `__init__.py` + registry wiring (`models/__init__.py`,
 `tools/registry.py`). Reuse `inkling2` vision/processing/parser. Target
 diff size: a few hundred lines, mirroring the 123-line llama.cpp delta.
+Switch the tool env to the fork with
+`uv tool install --editable /Users/ka/github/existential-birds/mlx-vlm --force`
+so this repo's scripts run fork code unchanged.
 
 **Phase 3 — Equivalence validation.** Statistical, not bit-exact (different
 quant formats): greedy top-1 token agreement ≥ 99% over the fixed prompt
@@ -230,11 +246,12 @@ loop: E0 baseline (controls ×2), then levers in `references/mlx.md` order —
 KV-bits/scheme, `--prefill-step-size`, `--max-num-seqs`/c4, draft (if Phase-1
 finds drafter weights), all gated by needle tests at 131K. Memory cap 36 GiB.
 
-**Phase 6 — Upstream.** PR the `inkling2_loop` model to mlx-vlm upstream
-(evidence attached: equivalence numbers, bench table). Also consider
-contributing the MLX quants to mlx-community, and the hill-climb results
-(levers with evidence) back to the inference-optimisation skill — its
-contributing section asks for exactly this.
+**Phase 6 — Upstream.** PR `inkling2_loop` from the fork
+(`existential-birds/mlx-vlm`) to `Neywa-Labs/mlx-vlm`, following the fork's
+`CONTRIBUTING.md` (evidence attached: equivalence numbers, bench table).
+Also consider contributing the MLX quants to mlx-community, and the
+hill-climb results (levers with evidence) back to the inference-optimisation
+skill — its contributing section asks for exactly this.
 
 ## 6. Risks
 
@@ -257,8 +274,8 @@ contributing section asks for exactly this.
 | HF→GGUF tensor map (reference) | `reference/llama-cpp/inkling2_conversion.py` (same) |
 | Target checkpoint | `thinkingmachines/Inkling-2-Mini` @ c9d0283 (config, index) |
 | Oracle GGUF | `DevQuasar/thinkingmachines.Inkling-2-Mini-GGUF` @ fd1ba3a (Q4_K_M + mmproj) |
-| MLX sibling implementation | `~/.local/share/uv/tools/mlx-vlm/.../mlx_vlm/models/inkling2/` |
-| MLX inkling drafters | `…/mlx_vlm/speculative/drafters/{inkling_mtp,inkling2_dspark}/` |
+| MLX sibling implementation | fork working copy: `/Users/ka/github/existential-birds/mlx-vlm` (`existential-birds/mlx-vlm`, base `main` @ `e8035ae3`, upstream `Neywa-Labs/mlx-vlm`) |
+| MLX inkling drafters | `…/mlx_vlm/speculative/drafters/{inkling_mtp,inkling2_dspark}/` (in the fork) |
 | Reasoning parser | `…/mlx_vlm/tools/parsers/inkling.py` |
 | Skill (discipline, harness) | `skills/inference-optimisation/` (SKILL.md, scripts/, references/) |
 | Hardware measurement | `scripts/measure_metal.py` → `THEORY.md` |
