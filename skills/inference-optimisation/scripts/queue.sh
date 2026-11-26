@@ -3,12 +3,23 @@
 #   queue.sh ctl-a cand ctl-b            # interleave controls around each candidate
 #   BENCH_FLAGS="--long 131072" queue.sh cand
 # Detach long queues so they survive agent/terminal restarts:
-#   setsid nohup bash queue.sh ctl-a cand ctl-b > queue.log 2>&1 < /dev/null & disown
+#   nohup bash queue.sh ctl-a cand ctl-b > queue.log 2>&1 < /dev/null & disown
 # Run from your experiment directory (the one holding configs/ and ledger.jsonl).
+set -uo pipefail
 LOCK=${QUEUE_LOCK:-/tmp/inference-hillclimb.lock}
-exec 9>"$LOCK"; flock 9
-for n in "$@"; do
-  python3 "${BENCH:-$(dirname "$0")/bench.py}" run "configs/$n.json" ${BENCH_FLAGS:-} > "runs-$n.log" 2>&1
-  echo "done $n: $(tail -c 300 "runs-$n.log" | tr '\n' ' ' | cut -c1-200)"
-done
-echo QUEUE_DONE "$@"
+BENCH_PY="${BENCH:-$(dirname "$0")/bench.py}"
+/usr/bin/python3 - "$LOCK" "$BENCH_PY" "$@" <<'PY'
+import fcntl, os, shlex, subprocess, sys
+
+lock_path, bench_py, *names = sys.argv[1:]
+extra = shlex.split(os.environ.get("BENCH_FLAGS", ""))
+with open(lock_path, "w") as lf:
+    fcntl.flock(lf, fcntl.LOCK_EX)
+    for n in names:
+        log_path = f"runs-{n}.log"
+        with open(log_path, "w") as out:
+            subprocess.run(["/usr/bin/python3", bench_py, "run", f"configs/{n}.json", *extra], stdout=out, stderr=subprocess.STDOUT)
+        tail = open(log_path, "rb").read()[-300:].decode("utf-8", "replace").replace("\n", " ")[:200]
+        print(f"done {n}: {tail}", flush=True)
+    print("QUEUE_DONE", *names, flush=True)
+PY

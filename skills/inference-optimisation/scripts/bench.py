@@ -27,7 +27,7 @@ Measurements (all token counts come from the server's usage stats, never from st
   mem_peak_gib, flags (LOOP, REQ_FAIL, ON_BATTERY, MEM_CAP). Results are appended to ledger.jsonl.
 The server is left running after a run (the next run's launch stops it first); stop it yourself when done.
 """
-import json, os, random, statistics, string, subprocess, sys, threading, time, urllib.request
+import json, os, random, statistics, string, subprocess, sys, threading, time, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +50,7 @@ def log(*a):
 class Server:
     def __init__(self, cfg):
         self.cfg, self.base = cfg, cfg.get("base_url", "http://127.0.0.1:8000").rstrip("/")
+        self.preload_error = None
 
     def get(self, path, timeout=5):
         with urllib.request.urlopen(self.base + path, timeout=timeout) as r:
@@ -57,6 +58,18 @@ class Server:
 
     def healthy(self):
         try:
+            try:
+                h = self.get("/health")
+                if h.get("preload_failures"):
+                    self.preload_error = h["preload_failures"]
+                    return False
+                if h.get("preload_in_progress") or h.get("model_ready") is False:
+                    return False
+                if h.get("model_ready") is True:
+                    return True
+            except urllib.error.HTTPError as e:
+                if e.code != 404:
+                    return False
             return bool(self.get("/v1/models").get("data"))
         except Exception:
             return False
@@ -168,8 +181,8 @@ def run(cfg_path, long_ctx=None, skip_cn=False, reps=6):
             watch.start()
         deadline = t0 + cfg.get("health_timeout_s", 900)
         while not srv.healthy():
-            if time.monotonic() > deadline or (watch and watch.tripped):
-                res.update(ok=False, error="server did not become healthy")
+            if srv.preload_error or time.monotonic() > deadline or (watch and watch.tripped):
+                res.update(ok=False, error=f"preload failed: {srv.preload_error}" if srv.preload_error else "server did not become healthy")
                 return finish(res, flags, watch)
             time.sleep(1)
         res["startup_s"] = round(time.monotonic() - t0, 1)

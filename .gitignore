@@ -1,5 +1,7 @@
 .server.pid
 logs/
+runs-*.log
+models/
 __pycache__/
 *.pyc
 .venv/

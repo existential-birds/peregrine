@@ -1,0 +1,26 @@
+{
+  "bandwidth_gbs": 440,
+  "peak_tflops": 15.2,
+  "mfu": 0.5,
+  "dense_gb": 0.931,
+  "experts_gb": 29.43,
+  "top_k": 8,
+  "n_experts": 128,
+  "lm_head_gb": 0.261,
+  "active_params_b": 5.0,
+  "attn_layers": 8,
+  "attn_heads": 24,
+  "head_dim": 128,
+  "extra_flops_per_token": 251658240,
+  "kv_bytes_per_token": 32768,
+  "draft_layer_gb": 0.363,
+  "draft_head_gb": 0.261,
+  "spec": [
+    {"drafts": 0, "accept": 1.0},
+    {"drafts": 1, "accept": 1.8},
+    {"drafts": 1, "accept": 2.46},
+    {"drafts": 1, "accept": 3.5}
+  ],
+  "contexts": [4096, 32768, 131072, 262144],
+  "concurrency": [1, 4]
+}
