@@ -79,12 +79,12 @@ the harness needs no changes.
 
 ## STATUS
 
-Target switched (user decision, 2026-11-25): **Inkling-2-Mini on MLX** —
-novelty over performance; ~145 tok/s ceiling accepted. Implementation plan:
-`PROPOSAL.md` (build `inkling2_loop` + affine 4-bit conversion, validated
-against a llama.cpp oracle). Implementation lives in the fork
-**`existential-birds/mlx-vlm`** (`/Users/ka/github/existential-birds/mlx-vlm`,
-upstream `Neywa-Labs/mlx-vlm` @ base `e8035ae3`); this repo stays the
-experiment working dir. Ornith-1.5-35B-A3B + DFlash remains the documented
-fallback/comparator. Baseline experiments deferred until the MLX port lands;
-Phase 0 (llama.cpp oracle baseline) can run meanwhile.
+Target (user decision, 2026-11-25): **Inkling-2-Mini on MLX** — novelty over
+performance; ~145 tok/s ceiling accepted. **No port needed:** `inkling2_loop`
+is already implemented inside `mlx_vlm/models/inkling2/` (routed at
+`utils.py:82`; controllers/bank/message-queries in `language.py`); the fork
+**`existential-birds/mlx-vlm`** (`main` @ `e8035ae3`, upstream
+`Neywa-Labs/mlx-vlm`) adds Mini-specific kernels absent from PyPI 0.8.1.
+Remaining plan: `PROPOSAL.md` v2 — smoke-test serving from the fork, pick
+quant (NVFP4 as-is vs affine 4-bit convert), validation gates, hill-climb.
+Ornith-1.5-35B-A3B + DFlash remains the documented fallback/comparator.
