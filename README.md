@@ -1,4 +1,6 @@
-![Impressionist oil painting of a peregrine falcon stooping through open sky](assets/peregrine-stoop.jpg)
+<p align="center">
+  <img src="assets/peregrine-stoop.jpg" width="480" alt="Impressionist oil painting of a peregrine falcon in a vertical stoop at dawn">
+</p>
 
 # Peregrine
 
