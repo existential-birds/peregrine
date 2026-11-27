@@ -1,4 +1,4 @@
-![Peregrine falcon diving over coastal cliffs](assets/peregrine-stoop.jpg)
+![Impressionist oil painting of a peregrine falcon stooping through open sky](assets/peregrine-stoop.jpg)
 
 # Peregrine
 
