@@ -1,0 +1,26 @@
+{
+  "name": "gate-131k",
+  "base_url": "http://127.0.0.1:8080",
+  "model": "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit",
+  "launch": [
+    "bash",
+    "scripts/launch-mlx.sh",
+    "gate-131k",
+    "--model",
+    "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit",
+    "--prefill-step-size",
+    "512",
+    "--cache-limit",
+    "4294967296",
+    "--max-num-seqs",
+    "4"
+  ],
+  "stop": ["bash", "scripts/stop-mlx.sh"],
+  "health_timeout_s": 900,
+  "concurrency": 4,
+  "prefill_lengths": [],
+  "extra_body": {"reasoning_effort": "none"},
+  "temperature": 0.6,
+  "memory": {"cap_gib": 36, "probe": ["bash", "scripts/mem-macos.sh"], "interval_s": 3},
+  "require_ac": true
+}

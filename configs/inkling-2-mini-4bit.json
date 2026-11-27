@@ -1,8 +1,20 @@
 {
-  "name": "inkling-2-mini-4bit-e0",
+  "name": "inkling-2-mini-4bit",
   "base_url": "http://127.0.0.1:8080",
   "model": "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit",
-  "launch": ["bash", "scripts/launch-mlx.sh", "inkling-2-mini-4bit-e0", "--model", "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit"],
+  "launch": [
+    "bash",
+    "scripts/launch-mlx.sh",
+    "inkling-2-mini-4bit",
+    "--model",
+    "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit",
+    "--prefill-step-size",
+    "512",
+    "--cache-limit",
+    "4294967296",
+    "--max-num-seqs",
+    "4"
+  ],
   "stop": ["bash", "scripts/stop-mlx.sh"],
   "health_timeout_s": 900,
   "concurrency": 4,

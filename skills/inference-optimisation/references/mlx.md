@@ -74,3 +74,41 @@ Serving and hill-climbing MLX models on M-series Macs. Read together with
   Qwen3.8-27B checkpoint) and the `mlx-vlm` version — draft wiring is
   version-sensitive.
 - Streaming may emit several tokens per chunk with MTP; count from usage.
+
+## Measured Precedents — Looped MoE (`Inkling-2-Mini`, M4 Max 48 GB)
+
+- **Looped-layer dispatch floor breaks naive bytes/token ceilings:** On a 48-visit
+  looped MoE (`24` physical layers, middle `12` × `3` passes, `3.03 GB/tok` in
+  mixed 4-bit dense + native NVFP4/MXFP8 experts), pure weight kernels took
+  `9.9 ms/tok` (`70%` of `440 GB/s`), while `9,951` MLX ops across 48 visits
+  added `13.7 ms/tok` (`58%` of step time) in loop controllers, `AttentionResidual`
+  bank mixing, and 192 short-convolutions — capping `c1` at `46.5 tok/s` vs a
+  naive `139 tok/s` bandwidth ceiling. Batching `(attn, k, v)` loop controllers
+  and `@mx.compile` saved ~`1.5–2 ms/step`.
+- **Sparse MoE `cN` ceiling must count expert union, not single-stream bytes:**
+  At `B=4` on top-8/128 MoE, 4 independent streams touch `128 × (1 - (120/128)^4)
+  = 29.0` unique experts/layer (`3.62×` single-stream expert bytes), lowering the
+  true `c4` bandwidth ceiling from `836` (dense-sharing assumption) to `224 tok/s`
+  (`93.3 tok/s` measured).
+- **DSpark / block-diffusion break-even on looped MoE:** `L`-token verify widens
+  the active expert union across all 48 visits (`57 ms/round` at `block_size=5`
+  vs `21.5 ms` 1-token decode → break-even `a* = 2.48`). Shallow blocks (`5`)
+  beat deep blocks (`8`: `100 ms/round`, `a* = 4.35`) by `+79%` across the panel,
+  winning on code (`54.3 tok/s`, `+25%`) but losing on `T=0.6` prose (`26–34 tok/s`)
+  and regressing `c4` (`-58%`).
+- **Bound `--prefill-step-size` when attention materializes `[B, H, LQ, S]` masks:**
+  Models with relative-position or banded float masks allocate `B × H × LQ × S × 2 B`
+  per global layer (`24.3 GiB` at `LQ=2048, S=131K` incl. sink concat). Lowering
+  `--prefill-step-size` to `512` + `--cache-limit 4 GiB` cut peak 32K footprint
+  `30.1 → 23.9 GiB`, improved 4K/32K prefill (`590 / 547 tok/s`), and fit 131K
+  (`30.1 GiB`) and `2 × 67K` concurrent soak (`25.2 GiB`) under 36 GiB without
+  raising `iogpu.wired_limit_mb`.
+- **Clear spent `left_padding` on recurrent/conv batch caches:** `ArraysCache`
+  retained negative `left_padding` arrays after prefill on unequal-length batches,
+  disabling fused `ShortConvolution` Metal kernels and adding `+7,368` ops/step
+  until cleared once `advance >= max(padding)`.
+- **macOS probes & readiness:** `footprint -p <pid>` suspends a 20 GB Metal task
+  for up to `29 s`; query `libproc.proc_pid_rusage` (`RUSAGE_INFO_V4.ri_phys_footprint`,
+  `< 1 ms`, zero suspension) instead. Poll `mlx_vlm.server`'s `/health`
+  (`model_ready: true`) rather than `/v1/models`, which synchronously runs
+  `huggingface_hub.scan_cache_dir()` on every call.

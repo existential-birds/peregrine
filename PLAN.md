@@ -79,15 +79,52 @@ the harness needs no changes.
 
 ## STATUS
 
-Target (user decision, 2026-11-25): **Inkling-2-Mini on MLX** — novelty over
-performance; ~145 tok/s ceiling accepted. **No port needed:** `inkling2_loop`
-is already implemented inside `mlx_vlm/models/inkling2/` (routed at
-`utils.py:82`; controllers/bank/message-queries in `language.py`); the fork
-**`existential-birds/mlx-vlm`** (`main` @ `e8035ae3`, upstream
-`Neywa-Labs/mlx-vlm`) adds Mini-specific kernels absent from PyPI 0.8.1.
-Remaining plan: `PROPOSAL.md` v2 — smoke-test serving from the fork, pick
-quant (NVFP4 as-is vs affine 4-bit convert), validation gates, hill-climb.
-Ornith-1.5-35B-A3B + DFlash remains the documented fallback/comparator.
+Target (user decision, 2026-11-25): **Inkling-2-Mini on MLX** — **COMPLETE &
+QUALIFIED (2026-11-26)** in [best-config.json](best-config.json) on fork
+**`existential-birds/mlx-vlm`** branch `perf/inkling2-serving` @ `f871d0b7`
+(base `main` @ `e8035ae3`; `mlx 0.32.5`, Apple M4 Max 40-core GPU, 48 GB).
+
+- **Best (`e4-best-cand`) vs clean 4-bit baseline (`e1r-4bit-ctl-a` / `e2-4bit-ctl-a`) vs native NVFP4 (`p2-nvfp4-ctl-b`) vs ceiling:**
+  - **`c1` decode (`T=0.6`, `reasoning_effort="none"`, median of 6):**
+    **`46.45 tok/s`** (`21.5 ms/tok`) vs `43.45–44.08 tok/s` clean 4-bit
+    baseline (`+5.4%–6.9%`), `33.11 tok/s` native NVFP4 (`+40.3%`), and
+    `139 tok/s` pure weight-bandwidth ceiling @ 4K (`33.4%` of naive BW ceiling;
+    `47.0%` of `9.92 ms` raw weight-kernel floor once `13.7 ms` of 48-visit
+    loop/dispatch work is accounted for).
+  - **`c4` aggregate decode:** **`93.31 tok/s`** (`4 × 23.98`) vs `77.97–79.39`
+    clean 4-bit baseline (`+17.5%–19.7%`), `16.22–34.70` native NVFP4, and
+    **`224 tok/s`** true sparse-MoE `c4` bandwidth ceiling (`29.0/128` unique
+    experts/layer = `7.85 GB/step`; `41.7%` of true ceiling).
+  - **Cold prefill:** **`590.5 tok/s`** @ 4K (`3,300` tok; **`81.2%`** of `727`
+    practical 50%-MFU ceiling) and **`547.4 tok/s`** @ 32K (`25,552` tok;
+    **`85.4%`** of `641` ceiling) vs `533.7 / 507.9` clean baseline and
+    `332.8 / 306.7` native NVFP4.
+  - **TTFT / Startup / Peak memory (25–33K bench):** **`196.1 ms`** / **`5.3 s`** /
+    **`23.91 GiB`** (`-6.2 GiB` vs `30.1 GiB` unbounded 4-bit; `-10.4 GiB` vs
+    `34.3 GiB` NVFP4).
+  - **All validation & qualification gates GREEN (`≤ 36 GiB`, `iogpu.wired_limit_mb=0` untouched):**
+    - 32K exact needles (`33,248` tokens): **`3/3`**, `458.1 tok/s` prefill, `26.54 tok/s` decode, `23.91 GiB`.
+    - 131K exact needles (`132,777` tokens): **`3/3`**, `258.9 tok/s` prefill, **`22.74 tok/s` decode** (`37.9%` of `60 tok/s` 128K ceiling), **`30.08 GiB`**.
+    - Concurrent full-KV soak (`2 × 67.3K = 134,684` live tokens): **`6/6` needles**, **`25.18 GiB`** peak, zero looping/trips.
+    - Modalities: chat, reasoning (`1591`), `inkling` tool round-trip, and vision (`64×64` PNG) all green.
+- **Limiting factors (measured, not guessed):**
+  1. **48-visit dispatch & loop-control floor (`13.7 ms/tok` = `58%` of `c1` step):**
+     1 token emits `9,951` MLX graph ops across 48 sequential visits (`1.96 µs/op`
+     Metal serial launch floor): `MessageController`s (`5.1 → ~3.5 ms` after 3×
+     batching), 97 `AttentionResidual` `mx.stack` + softmax (`2.73 ms`), and 192
+     short-convolutions (`2.97 ms`).
+  2. **Scattered `gather_qmm(K=8)` NVFP4 MoE bandwidth (`5.93 ms` = `227 GB/s`, `52%` peak):**
+     120 small top-8/128 expert gathers across 40 NVFP4 visits under-saturate DRAM
+     compared to dense 4-bit `qmv` (`463 GB/s`) and coda MXFP8 (`459 GB/s`).
+  3. **DSpark break-even (`a* = 2.48` at `block_size=5`):** L-token verify widens
+     the active expert union across 48 visits (`57.1 ms/round` vs `21.5 ms`
+     1-token step). Wins on code (`54.34 tok/s`), loses on `T=0.6` prose (`26–34 tok/s`).
+- **Ranked remaining levers (future work, beyond current scope):**
+  1. Custom Metal kernel fusing `AttentionResidual` (`rms_norm` + dot + softmax +
+     weighted sum without `mx.stack` allocation, ~`2.0 ms/tok` potential).
+  2. Fused Metal kernel for `MessageController` + `DynamicShortConvolution` (~`2.5 ms/tok`).
+  3. Workload-adaptive / code-only DSpark (`--draft-block-size 5` at `T=0` or code tasks).
+  4. Optional cross-engine `llama.cpp` Q4_K_M A/B (`DevQuasar` GGUF).
 
 ---
 
@@ -195,3 +232,181 @@ Ornith-1.5-35B-A3B + DFlash remains the documented fallback/comparator.
      theoretical decode ceiling (`139` vs `68 tok/s`). Next lever #1 in Phase 4
      must bound Metal buffer cache (`mx.set_cache_limit`) to eliminate swap
      noise before sweeping DSpark and server flags.
+
+### 2026-11-25 22:08 — Phase 4a Profiling: Where the `139 / 836 tok/s` ceiling gap actually goes
+
+- **Base locked (user confirmed):** `models/Inkling-2-Mini-4bit` +
+  `models/Inkling-2-Mini-4bit-mtp` (`247 MiB`).
+- **Profiler (`profile_ceiling_gap.py`, `ctx ≈ 550`, `mx.set_cache_limit(2 GiB)`):**
+  - **1-token MLX graph size:** **`9,951` op boxes** (`AttentionSinkKVCache`) vs
+    **`17,319` op boxes** (`mlx_vlm.server` `BatchKVCache` — **`+7,368` ops/token!**).
+  - **Measured Metal serial kernel-launch floor:** **`1.96–2.25 µs/op`** (`2,400`
+    serial elementwise ops = `4.71 ms`).
+  - **10-stage GPU breakdown across all 48 loop visits (`ms/step`, median of 12):**
+    - `c1` single-stream (`AttentionSinkKVCache`, sum = **`23.62 ms`** = `42.3 tok/s`):
+      - Weight stages (`3.031 GB`): `S3` dense attn (`2.01 ms`, `463 GB/s`),
+        `S10` `lm_head` (`0.91 ms`, `287 GB/s`; `0.76 ms` in bf16), `S9b` MXFP8
+        MoE (`1.07 ms`, `459 GB/s`), `S9a` NVFP4 MoE (`7.24 ms` incl. `1.31 ms`
+        router = `5.93 ms` / `227 GB/s` across 120 scattered `gather_qmm(K=8)`).
+        Total weight time = **`9.92 ms`** (`70%` of `6.89 ms` bandwidth floor).
+      - Non-weight / loop-dispatch stages (**`13.70 ms` = `58%` of step!**):
+        `S2` 96 uncompiled `MessageController`s (`5.09 ms` for `0.11 GB`),
+        `S1` 97 `AttentionResidual` `mx.stack` + softmax (`2.73 ms`),
+        `S4+S7` 192 short-convs (`2.97 ms`), `S8` router (`1.31 ms`),
+        `S5+S6` head prep + banded rel-pos mask + SDPA (`1.59 ms`).
+      - Explains why 4-bit's `2.1×` byte cut only yielded `~14%` on clean
+        `generate()` (`38.6 → 44.0 tok/s`): 4-bit only shrinks `S3 + S10`
+        (`~6.5 → 2.92 ms`), leaving `20.7 ms` (`88%`) untouched.
+    - `c1` server (`BatchKVCache`, sum = **`37.38 ms`** = `26.8 tok/s`):
+      - **Root-cause bug #1 (`+10.82 ms/tok`, `+7,368 ops/tok`):** after prefill,
+        `ArraysCache.left_padding` remains `array([-512])` instead of `None`.
+        `_cache_padding_mask` emits a `[[True]]` mask on every decode step,
+        disabling the fused `write_window` Metal kernel in all 176
+        `ShortConvolution`s (`S4`: `1.84 → 7.84 ms`, `S7`: `1.13 → 5.95 ms`).
+      - **Root-cause bug #2 (`+1.38 ms/tok` @ 550 ctx, grows with ctx):**
+        `BatchKVCache` lacks `AttentionSinkKVCache`'s preallocated zero sink
+        column, so `Attention.__call__` runs `mx.concatenate([k, zeros])` and
+        `mx.concatenate([v, zeros])` 48× per step (`S6`: `0.92 → 2.30 ms`).
+      - **Root-cause #3 (host & Metal cache):** unbounded `mx.set_cache_limit`
+        retains `~14 GiB` of buffers (`30.3 GiB` server footprint), plus a
+        background `com.apple.Virtualization` (Docker Desktop VM) holding `32 GB`
+        unified memory and bursting CPU (`Load Avg 14–24`), explaining the
+        remaining `26.8 → 22.1–24.6 tok/s` swap/CPU variance.
+    - `c4` server (`B=4, L=1`, sum = **`57.50 ms`** = `70–80 tok/s` agg clean):
+      - **Physics correction:** `ceiling.py`'s `836 tok/s` assumes dense weight
+        sharing across streams. For top-8/128 MoE, 4 independent streams touch
+        `128 × (1 - (120/128)^4) = 29.0` unique experts/layer (`3.62×` expert
+        bytes = `7.85 GB/step`), so **true MoE `c4` bandwidth ceiling is
+        `~224 tok/s`** (`19.1 ms/step`), not `836 tok/s`.
+      - Remaining `19.1 → 50.2 ms` gap: `+15.1 ms` `ArraysCache.left_padding`
+        bug (`S4+S7`), `+7.8 ms` loop controllers (`S2`), `+6.0 ms` `BatchKVCache`
+        96× KV sink concats (`S6`), `+4.2 ms` router `argpartition`, and
+        `+1.0 ms` `prepare_attention_heads` rejecting `batch != 1`.
+    - `B=1, L=8` speculative verify (`speculative_verify=True`): **`43.63 ms`**
+      fused (`1.17×` of 1-token server step!), hitting `grouped_expert_projections`
+      on both NVFP4 (`25.05 ms`) and MXFP8 (`4.36 ms`) while amortizing all loop
+      dispatch once per block. In isolated `ResponseGenerator` under load,
+      4-bit DSpark achieved `a = 2.32 tok/step` and **`1.92×` decode speedup**
+      over no-draft on the same engine (`26.73` vs `13.92 tok/s`).
+
+### 2026-11-26 14:43 — E1 DSpark drafter interleaved A/B (`ledger.jsonl` #5–9)
+
+- **Note on #5 (`e1-4bit-ctl-a` @ 22:17):** aborted queue cleanly after #5 finished
+  when a concurrent host Docker Desktop VM (`33 GB` RAM, `400%` CPU) drove the
+  host into swap (`c1 = 10.55 tok/s`). Re-ran fresh interleaved queue (`e1r-*`)
+  the next afternoon once Docker containers were idle (`<1.1%` CPU).
+- **Measured `ledger.jsonl` #6–9 (`models/Inkling-2-Mini-4bit`, `T=0.6`, `reasoning_effort="none"`, `reps=6`):**
+
+| Run | `c1_decode` | `c1_all` | `c4_agg` | `prefill_4K` | `prefill_32K` | `ttft_ms` | `startup_s` | `mem_peak_gib` |
+|---|---:|---|---:|---:|---:|---:|---:|---:|
+| `e1r-4bit-ctl-a` | **43.45** | `[43.36, 43.28, 43.78, 43.47, 43.96, 43.43]` | **77.97** | **533.7** | **507.9** | 209.2 | 10.6 | 30.12 |
+| `e1r-dspark-b8-cand` | 18.52 | `[40.32, 17.77, 14.57, 19.26, 23.65, 16.39]` | 22.60 | 484.7 | 413.8 | 215.2 | 5.3 | **35.96** |
+| `e1r-dspark-b5-cand` | 33.09 | `[54.34, 34.47, 26.85, 32.89, 33.29, 26.16]` | 32.87 | 462.1 | 411.8 | **202.5** | 5.5 | **34.52** |
+| `e1r-4bit-ctl-b` | 32.61 | `[40.75, 37.08, 33.02, 31.43, 29.50, 32.19]` | 53.36 | 457.9 | 418.5 | 203.6 | 5.4 | 30.04 |
+
+- **Clean baseline validation:** With host contention gone, `e1r-4bit-ctl-a`
+  matched our isolated profiler within `2%`: **`43.45 tok/s` `c1`** (`±0.3 tok/s`
+  across all 6 prompts; `BatchGenerator` leaves `left_padding=None` at `B=1`),
+  **`77.97 tok/s` `c4`** (where unequal prompt lengths `[37, 33, 37, 39]` set
+  `left_padding=[2, 6, 2, 0]` and trigger the `+15.1 ms/step` `ArraysCache` bug),
+  and **`533.7 / 507.9 tok/s` prefill** (`73–79%` of practical 50%-MFU ceiling).
+- **Verdict on E1 (`DSpark`): REJECTED as default server config.**
+  - **Why:** Single-token decode takes `23.0 ms` (`43.45 tok/s`), whereas one
+    `block_size=5` DSpark draft+verify round takes `~57.1 ms` (`17.5 tok/s` on
+    0-accept rounds in server logs; `~100 ms` at `block_size=8`) because `L`-token
+    verify expands the top-8/128 routed-expert union across all 48 visits.
+    Break-even acceptance is **`a* = 2.48` tokens/round** (`4.35` at `b8`).
+  - On code (`PROMPTS[0]`, LRU cache), `b5` clears break-even (`a ≈ 3.1 → 54.34
+    tok/s`, **`+25.1%` win** over `43.45`, and `+34.8%` over `b8`'s `40.32`).
+    On sampled prose at `T=0.6` (`PROMPTS[1..5]`), acceptance drops to `a ≈
+    1.5–1.95`, regressing median `c1` to `33.09 tok/s` (`-24%`), regressing `c4`
+    by `-58%` (`77.97 → 32.87`), and pushing `mem_peak_gib` to `34.52–35.96 GiB`
+    (re-inducing host swap carryover seen in `e1r-4bit-ctl-b`).
+
+### 2026-11-26 15:10 — E2 `--cache-limit 2 GiB` interleaved A/B (`ledger.jsonl` #10–12)
+
+- **Change:** Fork branch `perf/inkling2-serving` (`77af3cfe`) adds `--cache-limit`
+  (`MLX_VLM_CACHE_LIMIT`) to `mlx_vlm.server`; candidate sets `2147483648` (2 GiB).
+- **Measured `ledger.jsonl` #10–12 (`T=0.6`, `reasoning_effort="none"`, `reps=6`):**
+
+| Run | `c1_decode` | `c1_all` | `c4_agg` | `prefill_4K` | `prefill_32K` | `ttft_ms` | `startup_s` | `mem_peak_gib` |
+|---|---:|---|---:|---:|---:|---:|---:|---:|
+| `e2-4bit-ctl-a` | **44.08** | `[44.02, 44.20, 44.08, 44.09, 44.05, 44.07]` | **79.39** | **551.1** | **524.1** | **198.2** | 7.3 | 29.93 |
+| `e2-cache2g-cand` | 33.89 | `[43.97, 43.77, 35.95, 31.82, 27.12, 27.07]` | 52.56 | 450.1 | 413.5 | 202.3 | 5.4 | **27.26** |
+| `e2-4bit-ctl-b` | 36.08 | `[42.16, 38.87, 37.27, 34.69, 34.33, 34.89]` | 62.81 | 493.8 | 446.9 | 202.1 | 5.4 | 30.21 |
+
+- **Verdict on E2 (`--cache-limit 2 GiB`): REJECTED as default.**
+  - Host had `29 GB` free physical RAM (`0` swapouts); `e2-cache2g-cand` cut
+    `mem_peak_gib` by `2.67 GiB` (`29.93 → 27.26 GiB`) but regressed below BOTH
+    adjacent controls (`33.89` vs `44.08` & `36.08` `c1`; `52.56` vs `79.39` &
+    `62.81` `c4`; `450.1` vs `551.1` & `493.8` `prefill_4K`).
+  - Why: once cached Metal buffers reach `2.0 GiB` (starting on rep 3), growing
+    dynamic-shape tensors (`banded_additive_mask` over `S = 38..550`, `mx.stack`
+    in `AttentionResidual`) evict and trigger repeated `IOGPUMemory` buffer
+    reallocation syscalls. Also note laptop GPU thermal clock settling (`44.1 →
+    ~36 tok/s`) after consecutive 25K GEMM prefills; interleaved controls isolate
+    both effects cleanly. Keep `--cache-limit` in the fork CLI as an opt-in knob
+    for tight memory pools, unset by default.
+
+### 2026-11-26 15:26 — E3 Inkling-2 lossless kernel & batch-cache fastpaths (`ledger.jsonl` #13–15)
+
+- **Change:** Fork commit `f871d0b7` on `perf/inkling2-serving`:
+  1. Batched 3× `(attn, k, v)` + `@mx.compile`d `MessageController` with fused
+     `forget`/`gain` projection (`mlx_vlm/models/inkling2/language.py`).
+  2. Widened `prepare_attention_heads` Metal kernel guard from `batch == 1` to
+     `1 <= batch * rows <= 8` (`mlx_vlm/models/inkling2/kernels.py`), enabling
+     the fused head-prep kernel at `c4` (`B=4, L=1`).
+  3. Auto-cleared spent `ArraysCache.left_padding` once `advance >= max(padding)`
+     (`mlx_vlm/models/cache.py` + `ar.py`), eliminating `+7,368` mask/fallback
+     ops per decode step on unequal-length batches (`c4`).
+  4. Added zero-copy `BatchKVCache.with_sink` (`mlx_vlm/models/cache.py` +
+     `language.py`), avoiding full-KV sink concatenation on `255/256` steps.
+  - All 68 Inkling-2 & cache unit tests pass (incl. 3 new regression tests).
+- **Measured `ledger.jsonl` #12–15 (`ctl → cand-a → ctl → cand-b` chain):**
+
+| Run | Ref | `c1_decode` | `c1_all` | `c4_agg` | `prefill_4K` | `prefill_32K` | `ttft_ms` | `mem_peak_gib` |
+|---|---|---:|---|---:|---:|---:|---:|---:|
+| `e2-4bit-ctl-b` (prev) | `77af3cfe` | 36.08 | `[42.16, 38.87, 37.27, 34.69, 34.33, 34.89]` | 62.81 | 493.8 | 446.9 | 202.1 | 30.21 |
+| `e3-fastpath-cand-a` | **`f871d0b7`** | **45.76** | `[46.39, 45.73, 45.75, 45.77, 45.91, 45.74]` | **91.95** | **587.3** | **529.0** | **198.4** | 30.05 |
+| `e3-4bit-ctl` | `77af3cfe` | 40.14 | `[44.14, 44.19, 43.62, 36.67, 32.99, 27.91]` | 49.94 | 441.8 | 418.6 | 202.0 | 30.14 |
+| `e3-fastpath-cand-b` | **`f871d0b7`** | 37.78 | `[42.85, 39.94, 38.04, 37.12, 37.52, 37.48]` | **68.39** | **492.6** | **449.6** | 200.9 | 31.18 |
+
+- **Verdict on E3 (`f871d0b7`): ACCEPTED.**
+  - Rested-chassis comparison (`e2-4bit-ctl-a` → `e3-fastpath-cand-a`): `c1`
+    **`44.08 → 45.76 tok/s` (`+3.8%`)**, `c4` **`79.39 → 91.95 tok/s` (`+15.8%`)**,
+    `prefill_4K` **`551.1 → 587.3 tok/s` (`+6.6%`)**, `prefill_32K` **`524.1 →
+    529.0 tok/s`**.
+  - `e3-fastpath-cand-a` beat both adjacent controls (`e2-4bit-ctl-b` and
+    `e3-4bit-ctl`) on every metric, and thermally-warm repeat `e3-fastpath-cand-b`
+    still beat `e3-4bit-ctl` by **`+36.9%` on `c4`** (`68.39` vs `49.94`) and
+    **`+11.5%` on `prefill_4K`** (`492.6` vs `441.8`).
+  - Also revealed that `e3-4bit-ctl` (run #2 without `--cache-limit`) had the
+    exact same thermal-soak curve (`44.1 → 27.9 tok/s`, `c4 = 49.94`) as
+    `e2-cache2g-cand` (`c4 = 52.56`), confirming run-#2 dips are laptop GPU
+    thermal throttling after 25K GEMM prefill rather than cache-limit churn.
+
+### 2026-11-26 15:51 — E4 unified config (`best-config.json`), 32K/131K needle gates, concurrent soak & modality qualification (`ledger.jsonl` #16–18)
+
+- **131K prefill mask math:** At default `--prefill-step-size 2048` and
+  `S = 132,777`, `banded_additive_mask` + sink concat allocate
+  `2 × [1, 24, 2048, 132777] × 2 B = 24.3 GiB` of transient masks on global
+  layers (`> 44 GiB` total). Setting `--prefill-step-size 512` cuts that 4× to
+  `6.1 GiB`, paired with `--cache-limit 4294967296` (4 GiB) and `--max-num-seqs 4`.
+- **Measured `e4-best-cand` + Phase 3 / final gates (`ledger.jsonl` #16–18):**
+  1. **`e4-best-cand` (`#16`):** **`c1 = 46.45 tok/s`** (`[47.18, 45.53, 46.30,
+     46.43, 46.50, 46.46]`), **`c4 = 93.31 tok/s`** (`[23.98 × 4]`),
+     **`prefill_4K = 590.5 tok/s`**, **`prefill_32K = 547.4 tok/s`**,
+     **`ttft_short_ms = 196.1 ms`**, **`startup_s = 5.3 s`**, **`mem_peak_gib =
+     23.91 GiB`** (`-6.14 GiB` below unbounded `e3-fastpath-cand-a`!).
+  2. **32K exact needle gate (`#16.long`, `33,248` real tokens):** **`3/3`**,
+     `ttft_s = 72.6 s` (`458.1 tok/s` prefill), `decode = 26.54 tok/s`, `23.91 GiB`.
+  3. **131K exact needle gate (`#17`, `132,777` real tokens):** **`3/3`**,
+     `ttft_s = 512.8 s` (`258.9 tok/s` prefill), **`decode = 22.74 tok/s`**,
+     **`mem_peak_gib = 30.08 GiB`** (`5.92 GiB` under the 36 GiB cap).
+  4. **Concurrent full-KV soak (`#18`, `2 × 67.3K = 134,684` live tokens):**
+     **`6/6` exact needles** (`["3/3", "3/3"]`), **`mem_peak_gib = 25.18 GiB`**,
+     zero trips, zero looping.
+  5. **Modalities re-qualified on winning server:** reasoning (`37 × 43 = 1591`),
+     structured `inkling` tool round-trip (`get_weather({"city": "Kyoto"})`),
+     and vision (`64×64` solid blue PNG → `"blue"`) all passed.
+- **Verdict:** **ACCEPTED as `best-config.json`.** All definition-of-done gates green.
