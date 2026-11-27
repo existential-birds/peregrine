@@ -1,3 +1,5 @@
+![Peregrine falcon diving over coastal cliffs](assets/peregrine-stoop.jpg)
+
 # Peregrine
 
 Apple Silicon LLM inference-optimisation harness built around measured Metal ceilings and interleaved A/B benchmarks (`ledger.jsonl`).

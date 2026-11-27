@@ -9,8 +9,8 @@ Measures (per references/ceilings.md — measure, don't trust spec sheets):
 
 Examples:
   python3 scripts/measure_metal.py
-  python3 scripts/measure_metal.py --repo existentialbirds/Inkling-2-Mini-4bit \\
-      --draft existentialbirds/Inkling-2-Mini-MTP-4bit
+  python3 scripts/measure_metal.py --repo existentialbirds/Inkling-2-Mini-mlx-vlm-4bit \\
+      --draft existentialbirds/Inkling-2-Mini-DSpark-mlx-vlm-4bit
 """
 import argparse
 import json
