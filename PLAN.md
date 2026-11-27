@@ -79,10 +79,13 @@ the harness needs no changes.
 
 ## STATUS
 
-Target (user decision, 2026-11-25): **Inkling-2-Mini on MLX** — **COMPLETE &
-QUALIFIED (2026-11-26)** in [best-config.json](best-config.json) on fork
+Target (user decision, 2026-11-25): **Inkling-2-Mini on MLX** — **COMPLETE,
+QUALIFIED & PUBLISHED (2026-11-27)** in [best-config.json](best-config.json) on fork
 **`existential-birds/mlx-vlm`** branch `perf/inkling2-serving` @ `f871d0b7`
 (base `main` @ `e8035ae3`; `mlx 0.32.5`, Apple M4 Max 40-core GPU, 48 GB).
+Published Hugging Face checkpoints (Apache 2.0 + Thinking Machines Model AUP):
+[`existentialbirds/Inkling-2-Mini-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-4bit) (`@6158c40c`)
+and [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-MTP-4bit) (`@1e218e5d`).
 
 - **Best (`e4-best-cand`) vs clean 4-bit baseline (`e1r-4bit-ctl-a` / `e2-4bit-ctl-a`) vs native NVFP4 (`p2-nvfp4-ctl-b`) vs ceiling:**
   - **`c1` decode (`T=0.6`, `reasoning_effort="none"`, median of 6):**
@@ -410,3 +413,14 @@ QUALIFIED (2026-11-26)** in [best-config.json](best-config.json) on fork
      structured `inkling` tool round-trip (`get_weather({"city": "Kyoto"})`),
      and vision (`64×64` solid blue PNG → `"blue"`) all passed.
 - **Verdict:** **ACCEPTED as `best-config.json`.** All definition-of-done gates green.
+
+### 2026-11-27 14:54 — Fork push & Hugging Face Hub publication
+
+- **Fork pushed:** `existential-birds/mlx-vlm` branch `perf/inkling2-serving`
+  (`77af3cfe`, `f871d0b7`; 68/68 unit tests passing) pushed to `origin` without
+  opening an upstream PR per user instruction.
+- **Checkpoints published (public, Apache 2.0 with `LICENSE`, `NOTICE` per §4(a)–(c), and Thinking Machines Model AUP attribution):**
+  1. Target VLM (`17.27 GB` / `16.08 GiB`, 17 files, `.eval_results/*` excluded):
+     [`existentialbirds/Inkling-2-Mini-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-4bit) @ `6158c40ca86fdbcbb5a32952104d740a2cb2c64d`
+  2. Companion 4-bit DSpark speculative drafter (`247 MiB`, 7 files):
+     [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-MTP-4bit) @ `1e218e5dfde70f6ed0d888676fe861b92982a7f7`

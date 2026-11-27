@@ -6,6 +6,8 @@
   "fork_branch": "perf/inkling2-serving",
   "fork_commit": "f871d0b7",
   "base_checkpoint": "thinkingmachines/Inkling-2-Mini@c9d028302cd0f035fdf8e7e91f089a4ce94d2195",
+  "hub_model": "existentialbirds/Inkling-2-Mini-4bit@6158c40ca86fdbcbb5a32952104d740a2cb2c64d",
+  "hub_draft_model": "existentialbirds/Inkling-2-Mini-MTP-4bit@1e218e5dfde70f6ed0d888676fe861b92982a7f7",
   "launch": [
     "bash",
     "scripts/launch-mlx.sh",
