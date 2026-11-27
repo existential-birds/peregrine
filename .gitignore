@@ -1,7 +1,11 @@
 .server.pid
 logs/
 runs-*.log
+queue.log
 models/
 __pycache__/
 *.pyc
 .venv/
+.DS_Store
+.env
+.env.*

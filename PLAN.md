@@ -84,8 +84,8 @@ QUALIFIED & PUBLISHED (2026-11-27)** in [best-config.json](best-config.json) on 
 **`existential-birds/mlx-vlm`** branch `perf/inkling2-serving` @ `f871d0b7`
 (base `main` @ `e8035ae3`; `mlx 0.32.5`, Apple M4 Max 40-core GPU, 48 GB).
 Published Hugging Face checkpoints (Apache 2.0 + Thinking Machines Model AUP):
-[`existentialbirds/Inkling-2-Mini-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-4bit) (`@6158c40c`)
-and [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-MTP-4bit) (`@1e218e5d`).
+[`existentialbirds/Inkling-2-Mini-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-4bit) (`@e6d93b36`)
+and [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-MTP-4bit) (`@b4af0a25`).
 
 - **Best (`e4-best-cand`) vs clean 4-bit baseline (`e1r-4bit-ctl-a` / `e2-4bit-ctl-a`) vs native NVFP4 (`p2-nvfp4-ctl-b`) vs ceiling:**
   - **`c1` decode (`T=0.6`, `reasoning_effort="none"`, median of 6):**
@@ -188,7 +188,7 @@ and [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existent
     `16.08 GiB` target + `247 MiB` 4-bit DSpark drafter) while keeping all 24
     MoE layers in lossless native `nvfp4`/`mxfp8`. Decode weight read drops
     **`6.302 → 3.031 GB/tok`** (**139 tok/s** @ 4K ceiling).
-  - Greedy logit equivalence (`verify_4bit_reload.py`): first-token cosine
+  - Greedy logit equivalence (isolated reload check): first-token cosine
     similarity `0.9986–0.9996`, `KL = 0.00000 nats`, `top1_match = True` across
     3 prompts, `51–73` exact greedy prefix tokens before first BF16 tie.
   - Note on `mlx-community/Inkling-2-Mini-4bit` (`9c0e296`): inspected and
@@ -225,7 +225,7 @@ and [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existent
      18.5 tok/s` and `c4` collapsed to `16.22 tok/s`), and leaves compressed
      pages that depress reps 1–2 of the immediately following 4-bit run
      (`10.3, 7.83 → 31.14 tok/s`).
-  3. Isolated verification with `mx.set_cache_limit(2 GiB)` (`task-307`) ran
+  3. Isolated verification with `mx.set_cache_limit(2 GiB)` ran
      `models/Inkling-2-Mini-4bit` at **43.99 tok/s** decode with **`16.24 GiB`
      peak memory** (`0.16 GiB` cache) — vs `38.6 tok/s` / `21+ GiB` for NVFP4.
   4. **Verdict (pending user sign-off on 4-bit dense quant):** `models/Inkling-2-Mini-4bit`
@@ -240,7 +240,7 @@ and [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existent
 
 - **Base locked (user confirmed):** `models/Inkling-2-Mini-4bit` +
   `models/Inkling-2-Mini-4bit-mtp` (`247 MiB`).
-- **Profiler (`profile_ceiling_gap.py`, `ctx ≈ 550`, `mx.set_cache_limit(2 GiB)`):**
+- **Isolated stage profiler (`ctx ≈ 550`, `mx.set_cache_limit(2 GiB)`):**
   - **1-token MLX graph size:** **`9,951` op boxes** (`AttentionSinkKVCache`) vs
     **`17,319` op boxes** (`mlx_vlm.server` `BatchKVCache` — **`+7,368` ops/token!**).
   - **Measured Metal serial kernel-launch floor:** **`1.96–2.25 µs/op`** (`2,400`
@@ -421,6 +421,6 @@ and [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existent
   opening an upstream PR per user instruction.
 - **Checkpoints published (public, Apache 2.0 with `LICENSE`, `NOTICE` per §4(a)–(c), and Thinking Machines Model AUP attribution):**
   1. Target VLM (`17.27 GB` / `16.08 GiB`, 17 files, `.eval_results/*` excluded):
-     [`existentialbirds/Inkling-2-Mini-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-4bit) @ `6158c40ca86fdbcbb5a32952104d740a2cb2c64d`
+     [`existentialbirds/Inkling-2-Mini-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-4bit) @ `e6d93b36b53a57f166c66373cbe20ad5e5a50982`
   2. Companion 4-bit DSpark speculative drafter (`247 MiB`, 7 files):
-     [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-MTP-4bit) @ `1e218e5dfde70f6ed0d888676fe861b92982a7f7`
+     [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-MTP-4bit) @ `b4af0a25bb8e54f5b3fbdbbc4c57b176423e92eb`

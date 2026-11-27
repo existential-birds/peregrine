@@ -1,7 +1,8 @@
 # PROPOSAL — Inkling-2-Mini on MLX: convert, validate, hill-climb
 
-Status: revised 2026-11-25 (v2 — supersedes "port inkling2_loop"). Companion
-log: `PLAN.md`.
+Status: archived planning proposal (revised 2026-11-25, v2 — supersedes "port
+inkling2_loop"). Superseded by completed benchmark results and qualified config
+in `PLAN.md` and `best-config.json`.
 
 ---
 
@@ -22,8 +23,8 @@ section is open.** Resolve in order:
 > fixing whatever the smoke test finds, in the fork.
 
 1. **End-to-end smoke test (the real Phase 1).** Switch the tool env to the
-   fork (`uv tool install --editable /Users/ka/github/existential-birds/mlx-vlm
-   --force`), serve the Mini from the official NVFP4 checkpoint
+   fork (`uv tool install --editable ../mlx-vlm --force`), serve the Mini from
+   the official NVFP4 checkpoint
    (`mlx_vlm.server --model thinkingmachines/Inkling-2-Mini --port 8080`),
    and confirm: config parses (incl. `loop_config`), tensors load
    (modelopt `w13/w2` + scales + `outer_scale_denominator`), the loop runs
@@ -91,11 +92,10 @@ ceiling, first-party MLX, dflash drafts) — analysis in `PLAN.md`.
 
 ## 2. Project context (all a future model needs)
 
-- **Repos:** this one (`peregrine` at
-  `/Users/ka/github/existential-birds/peregrine`, the experiment working dir:
+- **Repos:** this one (`peregrine`, the experiment working dir:
   harness, configs, ceilings, log) and the fork
-  **`existential-birds/mlx-vlm`** at
-  `/Users/ka/github/existential-birds/mlx-vlm` (remotes: `origin` = fork,
+  **`existential-birds/mlx-vlm`** (local sibling checkout `../mlx-vlm`;
+  remotes: `origin` = fork,
   `upstream` = `Neywa-Labs/mlx-vlm`, base `main` @ `e8035ae3`; read its
   `CONTRIBUTING.md` before changing it). The `uv tool`-installed mlx-vlm is
   PyPI 0.8.1 — **lags the fork; never benchmark on 0.8.1.**
@@ -105,7 +105,7 @@ ceiling, first-party MLX, dflash drafts) — analysis in `PLAN.md`.
   (no thermal drop at 8192³). Wired limit at system default
   (`iogpu.wired_limit_mb=0`, untouched).
 - **MLX stack:** `mlx 0.32.4` (pyenv python3.12 for measurement), mlx-vlm
-  venv at `/Users/ka/.local/share/uv/tools/mlx-vlm` (python3.14). Server:
+  venv at `~/.local/share/uv/tools/mlx-vlm` (python3.14). Server:
   `mlx_vlm.server` (OpenAI-compatible, port 8080; flags include
   `--draft-model --draft-kind {dflash,eagle3,mtp} --draft-block-size`,
   `--kv-bits --kv-quant-scheme {uniform,turboquant}`, `--max-kv-size`,
@@ -194,7 +194,7 @@ quant exists.
 ## 5. Build plan (v2)
 
 **Phase 1 — Smoke test from the fork.** `uv tool install --editable
-/Users/ka/github/existential-birds/mlx-vlm --force`; serve the NVFP4
+../mlx-vlm --force`; serve the NVFP4
 checkpoint; confirm load + loop + sane outputs. Log findings in `PLAN.md`.
 If something breaks: minimal fix on a fork branch (this is now our only
 "implementation" risk).
@@ -242,7 +242,7 @@ measured levers back into the vendored skill's `references/mlx.md`.
 | HF→GGUF tensor map (reference) | `reference/llama-cpp/inkling2_conversion.py` (same) |
 | Target checkpoint | `thinkingmachines/Inkling-2-Mini` @ c9d0283 (config, index) |
 | Cross-engine GGUF | `DevQuasar/thinkingmachines.Inkling-2-Mini-GGUF` @ fd1ba3a (Q4_K_M + mmproj) |
-| MLX implementation (working copy) | `/Users/ka/github/existential-birds/mlx-vlm` (`existential-birds/mlx-vlm`, base `main` @ e8035ae3, upstream `Neywa-Labs/mlx-vlm`) |
+| MLX implementation (fork) | `existential-birds/mlx-vlm` (local checkout `../mlx-vlm`, base `main` @ e8035ae3, upstream `Neywa-Labs/mlx-vlm`) |
 | Skill (discipline, harness) | `skills/inference-optimisation/` (SKILL.md, scripts/, references/) |
 | Hardware measurement | `scripts/measure_metal.py` → `THEORY.md` |
 | Experiment log | `PLAN.md` |
@@ -253,5 +253,5 @@ Fetch commands (pin-verify):
 curl -s https://huggingface.co/thinkingmachines/Inkling-2-Mini/raw/main/config.json
 curl -s https://huggingface.co/thinkingmachines/Inkling-2-Mini/raw/main/model.safetensors.index.json
 # fork Mini-related history:
-git -C /Users/ka/github/existential-birds/mlx-vlm log --oneline -i --grep=inkling
+git -C ../mlx-vlm log --oneline -i --grep=inkling
 ```
