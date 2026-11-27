@@ -1,15 +1,15 @@
 {
   "name": "e1r-dspark-b5-cand",
   "base_url": "http://127.0.0.1:8080",
-  "model": "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit",
+  "model": "models/Inkling-2-Mini-4bit",
   "launch": [
     "bash",
     "scripts/launch-mlx.sh",
     "e1r-dspark-b5-cand",
     "--model",
-    "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit",
+    "models/Inkling-2-Mini-4bit",
     "--draft-model",
-    "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit-mtp",
+    "models/Inkling-2-Mini-4bit-mtp",
     "--draft-kind",
     "dflash",
     "--draft-block-size",

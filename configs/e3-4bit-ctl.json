@@ -1,13 +1,13 @@
 {
   "name": "e3-4bit-ctl",
   "base_url": "http://127.0.0.1:8080",
-  "model": "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit",
+  "model": "models/Inkling-2-Mini-4bit",
   "launch": [
     "bash",
     "scripts/launch-mlx.sh",
     "e3-4bit-ctl",
     "--model",
-    "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit"
+    "models/Inkling-2-Mini-4bit"
   ],
   "stop": ["bash", "scripts/stop-mlx.sh"],
   "health_timeout_s": 900,

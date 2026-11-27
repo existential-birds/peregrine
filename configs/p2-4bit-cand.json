@@ -1,8 +1,8 @@
 {
   "name": "p2-4bit-cand",
   "base_url": "http://127.0.0.1:8080",
-  "model": "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit",
-  "launch": ["bash", "scripts/launch-mlx.sh", "p2-4bit-cand", "--model", "/Users/ka/github/existential-birds/peregrine/models/Inkling-2-Mini-4bit"],
+  "model": "models/Inkling-2-Mini-4bit",
+  "launch": ["bash", "scripts/launch-mlx.sh", "p2-4bit-cand", "--model", "models/Inkling-2-Mini-4bit"],
   "stop": ["bash", "scripts/stop-mlx.sh"],
   "health_timeout_s": 900,
   "concurrency": 4,
