@@ -84,8 +84,8 @@ QUALIFIED & PUBLISHED (2026-11-27)** in [best-config.json](best-config.json) on 
 **`existential-birds/mlx-vlm`** branch `perf/inkling2-serving` @ `f871d0b7`
 (base `main` @ `e8035ae3`; `mlx 0.32.5`, Apple M4 Max 40-core GPU, 48 GB).
 Published Hugging Face checkpoints (Apache 2.0 + Thinking Machines Model AUP):
-[`existentialbirds/Inkling-2-Mini-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-4bit) (`@e6d93b36`)
-and [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-MTP-4bit) (`@b4af0a25`).
+[`existentialbirds/Inkling-2-Mini-mlx-vlm-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-mlx-vlm-4bit) (`@3d000db1`)
+and [`existentialbirds/Inkling-2-Mini-DSpark-mlx-vlm-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-DSpark-mlx-vlm-4bit) (`@58203c8a`).
 
 - **Best (`e4-best-cand`) vs clean 4-bit baseline (`e1r-4bit-ctl-a` / `e2-4bit-ctl-a`) vs native NVFP4 (`p2-nvfp4-ctl-b`) vs ceiling:**
   - **`c1` decode (`T=0.6`, `reasoning_effort="none"`, median of 6):**
@@ -424,3 +424,6 @@ and [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existent
      [`existentialbirds/Inkling-2-Mini-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-4bit) @ `e6d93b36b53a57f166c66373cbe20ad5e5a50982`
   2. Companion 4-bit DSpark speculative drafter (`247 MiB`, 7 files):
      [`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-MTP-4bit) @ `b4af0a25bb8e54f5b3fbdbbc4c57b176423e92eb`
+- **2026-11-27 15:42 — Renamed Hub repositories** to disambiguate `mlx-vlm` + DSpark from text-only `mlx-lm` exports:
+  - [`existentialbirds/Inkling-2-Mini-mlx-vlm-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-mlx-vlm-4bit) @ `3d000db129f97afb3a169749a40a8ee3354c7eb2`
+  - [`existentialbirds/Inkling-2-Mini-DSpark-mlx-vlm-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-DSpark-mlx-vlm-4bit) @ `58203c8aa1c2cd1d294c8ab427cd7493ded7cb96`

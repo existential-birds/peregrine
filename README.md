@@ -4,23 +4,23 @@ Apple Silicon LLM inference-optimisation harness built around measured Metal cei
 
 ## Quick Start
 
-Serve [`existentialbirds/Inkling-2-Mini-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-4bit) (`46.5 tok/s` single-stream, `93.3 tok/s` `c4`, `23.9 GiB` peak on 48 GB Apple Silicon):
+Serve [`existentialbirds/Inkling-2-Mini-mlx-vlm-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-mlx-vlm-4bit) (`46.5 tok/s` single-stream, `93.3 tok/s` `c4`, `23.9 GiB` peak on 48 GB Apple Silicon):
 
 ```bash
 uv tool install "git+https://github.com/existential-birds/mlx-vlm.git@perf/inkling2-serving" --force
 
 mlx_vlm.server \
-  --model existentialbirds/Inkling-2-Mini-4bit \
+  --model existentialbirds/Inkling-2-Mini-mlx-vlm-4bit \
   --prefill-step-size 512 \
   --cache-limit 4294967296 \
   --max-num-seqs 4 \
   --port 8080
 ```
 
-For code generation (`54.3 tok/s` `c1`), add the 4-bit DSpark drafter ([`existentialbirds/Inkling-2-Mini-MTP-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-MTP-4bit)):
+For code generation (`54.3 tok/s` `c1`), add the 4-bit DSpark drafter ([`existentialbirds/Inkling-2-Mini-DSpark-mlx-vlm-4bit`](https://huggingface.co/existentialbirds/Inkling-2-Mini-DSpark-mlx-vlm-4bit)):
 
 ```bash
---draft-model existentialbirds/Inkling-2-Mini-MTP-4bit --draft-kind dflash --draft-block-size 5
+--draft-model existentialbirds/Inkling-2-Mini-DSpark-mlx-vlm-4bit --draft-kind dflash --draft-block-size 5
 ```
 
 ## Copy-Paste for Coding Agents
@@ -29,7 +29,7 @@ Paste into Claude Code, Codex, Cursor, or Antigravity to benchmark or hill-climb
 
 ```text
 Clone https://github.com/existential-birds/peregrine and read skills/inference-optimisation/SKILL.md and skills/inference-optimisation/references/mlx.md before acting.
-Measure this Mac's Metal bandwidth and FP16 TFLOPS (`python3 scripts/measure_metal.py`), compute ceilings (`skills/inference-optimisation/scripts/ceiling.py`), and hill-climb local serving of existentialbirds/Inkling-2-Mini-4bit (or replace with my target model) under a safe unified-memory cap (`scripts/mem-macos.sh`, AC power only).
+Measure this Mac's Metal bandwidth and FP16 TFLOPS (`python3 scripts/measure_metal.py`), compute ceilings (`skills/inference-optimisation/scripts/ceiling.py`), and hill-climb local serving of existentialbirds/Inkling-2-Mini-mlx-vlm-4bit (or replace with my target model) under a safe unified-memory cap (`scripts/mem-macos.sh`, AC power only).
 Change one variable per experiment, interleave controls (`skills/inference-optimisation/scripts/queue.sh` + `bench.py`, medians of >=6 in `ledger.jsonl`), log every win and failure in `PLAN.md`, gate on long-context needle retrieval, and write the qualified winner to `best-config.json`.
 ```
 
